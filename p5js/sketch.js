@@ -12,7 +12,7 @@
 // ChatGPT 3.5 https://chatgpt.com
 
 // Game state
-// const scoreStub = "Current score: ";
+const scoreStub = "Current score: ";
 let score;
 let poseLastUp;
 
@@ -93,48 +93,49 @@ function setup() {
 
 function draw() {
   background(100);
-  // image(video, width/2 - video_width , 0, width, height);
   let imgX = (width - videoWidth) / 2;
   let imgY = (height - videoHeight) / 2;
   image(video, imgX, imgY, videoWidth, videoHeight);
 
-  if(!poseNetModelReady){
+  if (!poseNetModelReady) {
     background(100);
     push();
     textSize(32);
     textAlign(CENTER);
     fill(255);
     noStroke();
-    text("Waiting for PoseNet model to load...", width/2, height/2);
+    text("Waiting for PoseNet model to load...", width / 2, height / 2);
     pop();
+    return;
   }
 
-  if(currentPoses) {
+  if (currentPoses) {
+    let currentTime = millis();
     for (let i = 0; i < currentPoses.length; i++) {
-      pose = currentPoses[i]
+      pose = currentPoses[i];
       drawPose(pose, i);
 
       // Check hand positions
       if (lastPoseUp) {
-        if (isPoseDown(pose.pose)) {
+        if (isPoseDown(pose.pose) && currentTime - lastStateChangeTime > minStateChangeInterval) {
           lastPoseUp = false;
           score++;
-
-          // If serial is open, transmit score
-          // if(serial.isOpen()){
-          //   serial.writeLine(1); 
-          //   console.log("sent serial 1");
-          // }
-          
-        } 
-      } else if (!lastPoseUp) {
-        if(isPoseUp(pose.pose)) {
+          lastStateChangeTime = currentTime;
+          console.log("Jumping jack detected. Score: " + score);
+          // pHtmlMsg.html(scoreStub + score);
+        }
+      } else {
+        if (isPoseUp(pose.pose) && currentTime - lastStateChangeTime > minStateChangeInterval) {
           lastPoseUp = true;
+          lastStateChangeTime = currentTime;
+          console.log("Pose up detected");
         }
       }
     }
   }
 }
+
+
 
 /**
  * Callback function called by ml5.js PoseNet when the PoseNet model is ready
@@ -210,58 +211,70 @@ function drawPose(pose, poseIndex) {
 }
 
 
+// Variables to store smoothed positions
+let smoothedKeypoints = {};
+
+function smoothKeypoint(part, currentPos, smoothingFactor = 0.2) {
+  if (!smoothedKeypoints[part]) {
+    smoothedKeypoints[part] = currentPos;
+  }
+  smoothedKeypoints[part].x = smoothingFactor * currentPos.x + (1 - smoothingFactor) * smoothedKeypoints[part].x;
+  smoothedKeypoints[part].y = smoothingFactor * currentPos.y + (1 - smoothingFactor) * smoothedKeypoints[part].y;
+  return smoothedKeypoints[part];
+}
+
+
 // functions to detect jumping jacks
-const shouldersAndHands = ["leftShouler", "rightShoulder", "leftWrist", "rightWrist"];
+const shouldersAndHands = ["leftShoulder", "rightShoulder", "leftWrist", "rightWrist"];
+const poseChangeThreshold = 20; // Adjust this value as needed
+let lastStateChangeTime = 0;
+const minStateChangeInterval = 500; // Minimum time between state changes in milliseconds
+
 function isPoseUp(pose) {
-  // console.log("have keypoints to check if up");
-  // get keypoints we need and store
   let keypoints = pose.keypoints;
   let lShoulder = keypoints.find(k => k.part === "leftShoulder");
   let rShoulder = keypoints.find(k => k.part === "rightShoulder");
   let lHand = keypoints.find(k => k.part === "leftWrist");
   let rHand = keypoints.find(k => k.part === "rightWrist");
 
-  if (lHand === undefined || rHand === undefined) {
-    return false;
-  }
+  if (!lHand || !rHand || !lShoulder || !rShoulder) return false;
 
-  let lShoulderY = 0;
-  let rShoulderY = 0;
-  lShoulderY = lShoulder.position.y;
-  rShoulderY = rShoulder.position.y;
+  lShoulder = smoothKeypoint("leftShoulder", lShoulder.position);
+  rShoulder = smoothKeypoint("rightShoulder", rShoulder.position);
+  lHand = smoothKeypoint("leftWrist", lHand.position);
+  rHand = smoothKeypoint("rightWrist", rHand.position);
 
-  let lHandDelta = (lHand.position.y - lShoulderY);
-  let rHandDelta = (rHand.position.y - rShoulderY);
+  let lHandDelta = lHand.y - lShoulder.y;
+  let rHandDelta = rHand.y - rShoulder.y;
 
-  // console.log("lhand y: " + lHand.position.y + " lshoulder y: " + lShoulder.position.y);
-  // console.log("lhand delta: " + lHandDelta + " rhand delta : " + rHandDelta);
-  if ((lHandDelta < 0) || rHandDelta < 0) {
-    console.log("up");
-    return true;
-  } else {
-    return false;
-  }
+  // console.log(`isPoseUp - lHandDelta: ${lHandDelta}, rHandDelta: ${rHandDelta}`);
+
+  return (lHandDelta < -poseChangeThreshold || rHandDelta < -poseChangeThreshold);
 }
 
 function isPoseDown(pose) {
-  // get keypoints we need and store
   let keypoints = pose.keypoints;
   let lShoulder = keypoints.find(k => k.part === "leftShoulder");
   let rShoulder = keypoints.find(k => k.part === "rightShoulder");
   let lHand = keypoints.find(k => k.part === "leftWrist");
   let rHand = keypoints.find(k => k.part === "rightWrist");
 
-  let lHandDelta = (lHand.position.y - lShoulder.position.y);
-  let rHandDelta = (rHand.position.y-rShoulder.position.y);
+  if (!lHand || !rHand || !lShoulder || !rShoulder) return false;
 
-  // console.log("lhand delta: " + lHandDelta + " rhand delta : " + rHandDelta);
-  if (lHandDelta >= 0 || rHandDelta >= 0 ) {
-    console.log("down");
-    return true;
-  } else {
-    return false;
-  }
+  lShoulder = smoothKeypoint("leftShoulder", lShoulder.position);
+  rShoulder = smoothKeypoint("rightShoulder", rShoulder.position);
+  lHand = smoothKeypoint("leftWrist", lHand.position);
+  rHand = smoothKeypoint("rightWrist", rHand.position);
+
+  let lHandDelta = lHand.y - lShoulder.y;
+  let rHandDelta = rHand.y - rShoulder.y;
+
+  // console.log(`isPoseDown - lHandDelta: ${lHandDelta}, rHandDelta: ${rHandDelta}`);
+
+  return (lHandDelta > poseChangeThreshold && rHandDelta > poseChangeThreshold);
 }
+
+
 
 
 // see if the pose containts the parts in array keypointsToCheck
