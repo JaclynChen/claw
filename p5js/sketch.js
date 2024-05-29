@@ -11,6 +11,11 @@
 // This code was also iterated on, inspired by, and partially sourced using
 // ChatGPT 3.5 https://chatgpt.com
 
+// Game state
+// const scoreStub = "Current score: ";
+let score;
+let poseLastUp;
+
 // Web serial options
 let pHtmlMsg;
 let serialOptions = { baudRate: 115200  };
@@ -80,6 +85,10 @@ function setup() {
   // PoseNet init
   poseNet = ml5.poseNet(video, poseNetOptions, onPoseNetModelReady);
   poseNet.on('pose', onPoseDetected);
+
+  // Game state init
+  score = 0;
+  lastPoseUp = false;
 }
 
 function draw() {
@@ -104,6 +113,25 @@ function draw() {
     for (let i = 0; i < currentPoses.length; i++) {
       pose = currentPoses[i]
       drawPose(pose, i);
+
+      // Check hand positions
+      if (lastPoseUp) {
+        if (isPoseDown(pose.pose)) {
+          lastPoseUp = false;
+          score++;
+
+          // If serial is open, transmit score
+          // if(serial.isOpen()){
+          //   serial.writeLine(1); 
+          //   console.log("sent serial 1");
+          // }
+          
+        } 
+      } else if (!lastPoseUp) {
+        if(isPoseUp(pose.pose)) {
+          lastPoseUp = true;
+        }
+      }
     }
   }
 }
@@ -179,6 +207,71 @@ function drawPose(pose, poseIndex) {
     textAlign(LEFT, BOTTOM);
     textStyle(NORMAL);
     pHtmlMsg.html("Confidence: " + nf(pose.pose.score, 0, 1));
+}
+
+
+// functions to detect jumping jacks
+const shouldersAndHands = ["leftShouler", "rightShoulder", "leftWrist", "rightWrist"];
+function isPoseUp(pose) {
+  // console.log("have keypoints to check if up");
+  // get keypoints we need and store
+  let keypoints = pose.keypoints;
+  let lShoulder = keypoints.find(k => k.part === "leftShoulder");
+  let rShoulder = keypoints.find(k => k.part === "rightShoulder");
+  let lHand = keypoints.find(k => k.part === "leftWrist");
+  let rHand = keypoints.find(k => k.part === "rightWrist");
+
+  if (lHand === undefined || rHand === undefined) {
+    return false;
+  }
+
+  let lShoulderY = 0;
+  let rShoulderY = 0;
+  lShoulderY = lShoulder.position.y;
+  rShoulderY = rShoulder.position.y;
+
+  let lHandDelta = (lHand.position.y - lShoulderY);
+  let rHandDelta = (rHand.position.y - rShoulderY);
+
+  // console.log("lhand y: " + lHand.position.y + " lshoulder y: " + lShoulder.position.y);
+  // console.log("lhand delta: " + lHandDelta + " rhand delta : " + rHandDelta);
+  if ((lHandDelta < 0) || rHandDelta < 0) {
+    console.log("up");
+    return true;
+  } else {
+    return false;
+  }
+}
+
+function isPoseDown(pose) {
+  // get keypoints we need and store
+  let keypoints = pose.keypoints;
+  let lShoulder = keypoints.find(k => k.part === "leftShoulder");
+  let rShoulder = keypoints.find(k => k.part === "rightShoulder");
+  let lHand = keypoints.find(k => k.part === "leftWrist");
+  let rHand = keypoints.find(k => k.part === "rightWrist");
+
+  let lHandDelta = (lHand.position.y - lShoulder.position.y);
+  let rHandDelta = (rHand.position.y-rShoulder.position.y);
+
+  // console.log("lhand delta: " + lHandDelta + " rhand delta : " + rHandDelta);
+  if (lHandDelta >= 0 || rHandDelta >= 0 ) {
+    console.log("down");
+    return true;
+  } else {
+    return false;
+  }
+}
+
+
+// see if the pose containts the parts in array keypointsToCheck
+function hasKeypoints(pose, keypointsToCheck) {
+  if (!pose || !pose.keypoints) {
+    return false;
+  }
+  return keypointsToCheck.every(keypoint => 
+      pose.keypoints.some(k => k.part === keypoint)
+  );
 }
 
 
