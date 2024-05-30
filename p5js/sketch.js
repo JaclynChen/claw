@@ -12,7 +12,7 @@
 // ChatGPT 3.5 https://chatgpt.com
 
 // Game state
-const scoreStub = "Current score: ";
+const scoreStub = "Current funds: $";
 let score;
 let poseLastUp;
 
@@ -60,7 +60,7 @@ const poseNetOptions = {
 };
 
 function setup() {
-  createCanvas(640, 480);
+  createCanvas(videoWidth, videoHeight);
 
   // Setup Web Serial using serial.js
   // serial = new Serial();
@@ -80,7 +80,6 @@ function setup() {
   video.hide();
   // poseNet = ml5.poseNet(video, poseNetOptions, onPoseNetModelReady);
   // poseNet.on('pose', onPoseDetected);
-  createCanvas(videoWidth, videoHeight);
 
   // PoseNet init
   poseNet = ml5.poseNet(video, poseNetOptions, onPoseNetModelReady);
@@ -93,9 +92,14 @@ function setup() {
 
 function draw() {
   background(100);
+
+  // Center the video on the canvas
   let imgX = (width - videoWidth) / 2;
   let imgY = (height - videoHeight) / 2;
   image(video, imgX, imgY, videoWidth, videoHeight);
+
+  // Display the score on the screen
+  displayScore();
 
   if (!poseNetModelReady) {
     background(100);
@@ -135,7 +139,14 @@ function draw() {
   }
 }
 
-
+function displayScore() {
+  push();
+  fill(255);
+  textSize(32);
+  textAlign(LEFT, TOP);
+  text(scoreStub + (score* 1000), 10, 10);
+  pop();
+}
 
 /**
  * Callback function called by ml5.js PoseNet when the PoseNet model is ready
@@ -210,7 +221,6 @@ function drawPose(pose, poseIndex) {
     pHtmlMsg.html("Confidence: " + nf(pose.pose.score, 0, 1));
 }
 
-
 // Variables to store smoothed positions
 let smoothedKeypoints = {};
 
@@ -222,7 +232,6 @@ function smoothKeypoint(part, currentPos, smoothingFactor = 0.2) {
   smoothedKeypoints[part].y = smoothingFactor * currentPos.y + (1 - smoothingFactor) * smoothedKeypoints[part].y;
   return smoothedKeypoints[part];
 }
-
 
 // functions to detect jumping jacks
 const shouldersAndHands = ["leftShoulder", "rightShoulder", "leftWrist", "rightWrist"];
