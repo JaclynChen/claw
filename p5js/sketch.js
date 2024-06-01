@@ -11,12 +11,9 @@
 // This code was also iterated on, inspired by, and partially sourced using
 // ChatGPT 3.5 https://chatgpt.com
 
-// import { jsQR } from "https://code4fukui.github.io/jsQR-es/jsQR.js";
-
 let iframe = null;
 let scoreDisplay = null;
 let task = null;
-let videoLoaded = false;
 
 // Game state
 const scoreStub = "Current funds: $";
@@ -28,12 +25,9 @@ let pHtmlMsg;
 let serialOptions = { baudRate: 115200 };
 let serial;
 
-// QR code scanner
-const codeReader = new ZXing.BrowserMultiFormatReader();
-
 // Webcamera input options
-let videoWidth = 640;
-let videoHeight = 480;
+const videoWidth = 640;
+const videoHeight = 480;
 
 let video;
 let constraints = {
@@ -106,10 +100,7 @@ function setup() {
 
   // Create webcam image and put on page
   video = createCapture(constraints);
-  video.elt.addEventListener('loadeddata', onVideoLoaded);
   video.hide();
-  video.elt.id = "video";
-  graphics = createGraphics(1280, 720);
 
   // PoseNet init
   poseNet = ml5.poseNet(video, poseNetOptions, onPoseNetModelReady);
@@ -127,6 +118,7 @@ function draw() {
   let imgX = (width - videoWidth) / 2;
   let imgY = (height - videoHeight) / 2;
   image(video, imgX, imgY, videoWidth, videoHeight);
+  // console.log(video);
 
   if (!poseNetModelReady) {
     background(100);
@@ -170,49 +162,18 @@ function draw() {
   // Funding information
   scoreDisplay.innerText = scoreStub + (score * 1000);
 
-  if (videoLoaded) {
-    // QR code detection
-    // detectQRCode();
+  // let imageData = video.get(0,0,videoWidth, videoHeight);
+  // let imageData = video.pixels;
+  // let image=video.get();
+  video.loadPixels();
+  let imageData = video.pixels;
+  // console.log(imageData);
+  const code = jsQR(imageData, width, height,);
+
+  if (code) {
+    console.log("Found QR code", code);
+    iframe.src=code;
   }
-}
-
-function onVideoLoaded() {
-  console.log("Video data loaded.");
-  videoLoaded = true;
-
-  // Setup QR code items with added error handling
-  codeReader.listVideoInputDevices().then(videoInputDevices => {
-    if (videoInputDevices.length === 0) {
-      throw new Error("No video input devices found");
-    }
-    const firstDeviceId = videoInputDevices[0].deviceId;
-    codeReader.decodeFromVideoDevice(firstDeviceId, 'video', (result, err) => {
-      if (result) {
-        console.log('Found QR code!', result);
-        pHtmlMsg.html(result.text);
-      } else if (err) {
-        console.error("QR code decoding error:", err);
-      }
-    });
-  }).catch(err => console.error("Error listing video input devices:", err));
-
-  // Call detectQRCode() within a try-catch block
-  try {
-    detectQRCode();
-  } catch (error) {
-    console.error("Error in detectQRCode:", error);
-  }
-}
-
-
-function detectQRCode() {
-  graphics.image(video, 0, 0);
-  let img = createImage(graphics.width, graphics.height);
-  img.copy(graphics, 0, 0, graphics.width, graphics.height, 0, 0, graphics.width, graphics.height);
-  
-  codeReader.decodeFromImage(img)
-    .then(result => console.log(result.text))
-    .catch(err => console.error("QR code decoding error:", err));
 }
 
 
@@ -342,9 +303,6 @@ function isPoseDown(pose) {
 
   return (lHandDelta > poseChangeThreshold && rHandDelta > poseChangeThreshold);
 }
-
-
-
 
 // see if the pose containts the parts in array keypointsToCheck
 function hasKeypoints(pose, keypointsToCheck) {
