@@ -16,19 +16,22 @@
 let iframe = null;
 let scoreDisplay = null;
 let task = null;
+let videoLoaded = false;
 
 // Game state
 const scoreStub = "Current funds: $";
 let score;
-let poseLastUp;
+let lastPoseUp;
 
 // Web serial options
 let pHtmlMsg;
-let serialOptions = { baudRate: 115200  };
+let serialOptions = { baudRate: 115200 };
 let serial;
 
+// QR code scanner
+const codeReader = new ZXing.BrowserMultiFormatReader();
+
 // Webcamera input options
-// TODO: Flip this before processing by posenet?
 let videoWidth = 640;
 let videoHeight = 480;
 
@@ -47,7 +50,7 @@ let constraints = {
 // PoseNet variables
 let poseNet;
 let currentPoses;
-let poseNetModelReady;
+let poseNetModelReady = false;
 const poseNetOptions = {
   architecture: 'MobileNetV1',
   imageScaleFactor: 0.3,
@@ -57,8 +60,6 @@ const poseNetOptions = {
   maxPoseDetections: 5,
   scoreThreshold: 0.8,
   nmsRadius: 20,
-  // detectionType: 'multiple',
-  // chose single to avoid having to sort through multiple states
   detectionType: 'single',
   inputResolution: 513,
   multiplier: 0.75,
@@ -69,7 +70,7 @@ function setup() {
   // Create the iframe element
   iframe = document.createElement("iframe");
   // Set the source of the iframe
-  iframe.src = "https://jaclynchen.github.io/claw/index.html"
+  iframe.src = "https://jaclynchen.github.io/claw/index.html";
   // Set other attributes of the iframe
   iframe.style.width = "640px";
   iframe.style.height = "80vh";
@@ -83,7 +84,7 @@ function setup() {
 
   // Add score counter
   task = document.createElement("p");
-  task.textContent = "Task: Do jumping jacks"; 
+  task.textContent = "Task: Do jumping jacks";
   document.body.appendChild(task);
 
   scoreDisplay = document.createElement("p");
@@ -105,20 +106,14 @@ function setup() {
 
   // Create webcam image and put on page
   video = createCapture(constraints);
+  video.elt.addEventListener('loadeddata', onVideoLoaded);
   video.hide();
-  // poseNet = ml5.poseNet(video, poseNetOptions, onPoseNetModelReady);
-  // poseNet.on('pose', onPoseDetected);
+  video.elt.id = "video";
+  graphics = createGraphics(1280, 720);
 
   // PoseNet init
   poseNet = ml5.poseNet(video, poseNetOptions, onPoseNetModelReady);
   poseNet.on('pose', onPoseDetected);
-
-  // QR code canvas
-  // qrCanvas = select('#qrCanvas').elt;
-  // qrCanvasContext = qrCanvas.getContext('2d');
-
-  // Iframe for loading QR code URLs
-  // qrIframe = select('#qrIframe').elt;
 
   // Game state init
   score = 0;
@@ -132,9 +127,6 @@ function draw() {
   let imgX = (width - videoWidth) / 2;
   let imgY = (height - videoHeight) / 2;
   image(video, imgX, imgY, videoWidth, videoHeight);
-
-  // Display the score on the screen
-  displayScore();
 
   if (!poseNetModelReady) {
     background(100);
@@ -151,7 +143,7 @@ function draw() {
   if (currentPoses) {
     let currentTime = millis();
     for (let i = 0; i < currentPoses.length; i++) {
-      pose = currentPoses[i];
+      let pose = currentPoses[i];
       drawPose(pose, i);
 
       // Check hand positions
@@ -161,7 +153,6 @@ function draw() {
           score++;
           lastStateChangeTime = currentTime;
           console.log("Jumping jack detected. Score: " + score);
-          // pHtmlMsg.html(scoreStub + score);
         }
       } else {
         if (isPoseUp(pose.pose) && currentTime - lastStateChangeTime > minStateChangeInterval) {
@@ -174,67 +165,61 @@ function draw() {
   }
 
   // Task information
-  task.innerText= "who knows";
+  task.innerText = "Task: Do jumping jacks";
 
   // Funding information
-  scoreDisplay.innerText = scoreStub + score;
+  scoreDisplay.innerText = scoreStub + (score * 1000);
 
-  // QR code detection
-  // detectQRCode();
-}
-
-function displayScore() {
-  push();
-  fill(255);
-  textSize(32);
-  textAlign(LEFT, TOP);
-  text(scoreStub + (score* 1000), 10, 10);
-  pop();
-}
-
-function detectQRCode() {
-  qrCanvasContext.drawImage(video.elt, 0, 0, videoWidth, videoHeight);
-  let imageData = qrCanvasContext.getImageData(0, 0, videoWidth, videoHeight);
-  // let code = jsQR(video, videoWidth, videoHeight);
-  // console.log(JSON.stringify(imageData.data));
-  let code = jsQR(imageData.data, imageData.width, imageData.height);
-
-  if (code) {
-    console.log("QR Code detected: ", code.data);
-    qrIframe.src = code.data;
-    drawQRCode(code);
+  if (videoLoaded) {
+    // QR code detection
+    // detectQRCode();
   }
 }
 
-function drawQRCode(code) {
-  push();
-  noFill();
-  stroke(255, 0, 0);
-  strokeWeight(2);
+function onVideoLoaded() {
+  console.log("Video data loaded.");
+  videoLoaded = true;
 
-  // Draw the rectangle
-  beginShape();
-  vertex(location.topLeftCorner.x, location.topLeftCorner.y);
-  vertex(location.topRightCorner.x, location.topRightCorner.y);
-  vertex(location.bottomRightCorner.x, location.bottomRightCorner.y);
-  vertex(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
-  endShape(CLOSE);
+  // Setup QR code items with added error handling
+  codeReader.listVideoInputDevices().then(videoInputDevices => {
+    if (videoInputDevices.length === 0) {
+      throw new Error("No video input devices found");
+    }
+    const firstDeviceId = videoInputDevices[0].deviceId;
+    codeReader.decodeFromVideoDevice(firstDeviceId, 'video', (result, err) => {
+      if (result) {
+        console.log('Found QR code!', result);
+        pHtmlMsg.html(result.text);
+      } else if (err) {
+        console.error("QR code decoding error:", err);
+      }
+    });
+  }).catch(err => console.error("Error listing video input devices:", err));
 
-  pop();
+  // Call detectQRCode() within a try-catch block
+  try {
+    detectQRCode();
+  } catch (error) {
+    console.error("Error in detectQRCode:", error);
+  }
 }
 
-/**
- * Callback function called by ml5.js PoseNet when the PoseNet model is ready
- * Will be called once and only once
- */
+
+function detectQRCode() {
+  graphics.image(video, 0, 0);
+  let img = createImage(graphics.width, graphics.height);
+  img.copy(graphics, 0, 0, graphics.width, graphics.height, 0, 0, graphics.width, graphics.height);
+  
+  codeReader.decodeFromImage(img)
+    .then(result => console.log(result.text))
+    .catch(err => console.error("QR code decoding error:", err));
+}
+
+
 function onPoseNetModelReady() {
-  console.log("The PoseNet model is ready...");
   poseNetModelReady = true;
 }
 
-/**
- * Callback function called by ml5.js PosetNet when a pose has been detected
- */
 function onPoseDetected(poses) {
   currentPoses = poses;
 }
