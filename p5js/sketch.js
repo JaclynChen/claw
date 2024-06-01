@@ -11,6 +11,12 @@
 // This code was also iterated on, inspired by, and partially sourced using
 // ChatGPT 3.5 https://chatgpt.com
 
+// import { jsQR } from "https://code4fukui.github.io/jsQR-es/jsQR.js";
+
+let iframe = null;
+let scoreDisplay = null;
+let task = null;
+
 // Game state
 const scoreStub = "Current funds: $";
 let score;
@@ -60,7 +66,29 @@ const poseNetOptions = {
 };
 
 function setup() {
-  createCanvas(videoWidth, videoHeight);
+  // Create the iframe element
+  iframe = document.createElement("iframe");
+  // Set the source of the iframe
+  iframe.src = "https://jaclynchen.github.io/claw/index.html"
+  // Set other attributes of the iframe
+  iframe.style.width = "640px";
+  iframe.style.height = "80vh";
+  iframe.style.border = "none";
+  // Append the iframe to the container
+  document.body.appendChild(iframe);
+
+  // Create webcam canvas
+  let canvas = createCanvas(videoWidth, videoHeight);
+  canvas.position(640, 0);
+
+  // Add score counter
+  task = document.createElement("p");
+  task.textContent = "Task: Do jumping jacks"; 
+  document.body.appendChild(task);
+
+  scoreDisplay = document.createElement("p");
+  scoreDisplay.textContent = "Score: 0";
+  document.body.appendChild(scoreDisplay);
 
   // Setup Web Serial using serial.js
   // serial = new Serial();
@@ -84,6 +112,13 @@ function setup() {
   // PoseNet init
   poseNet = ml5.poseNet(video, poseNetOptions, onPoseNetModelReady);
   poseNet.on('pose', onPoseDetected);
+
+  // QR code canvas
+  // qrCanvas = select('#qrCanvas').elt;
+  // qrCanvasContext = qrCanvas.getContext('2d');
+
+  // Iframe for loading QR code URLs
+  // qrIframe = select('#qrIframe').elt;
 
   // Game state init
   score = 0;
@@ -137,6 +172,15 @@ function draw() {
       }
     }
   }
+
+  // Task information
+  task.innerText= "who knows";
+
+  // Funding information
+  scoreDisplay.innerText = scoreStub + score;
+
+  // QR code detection
+  // detectQRCode();
 }
 
 function displayScore() {
@@ -145,6 +189,37 @@ function displayScore() {
   textSize(32);
   textAlign(LEFT, TOP);
   text(scoreStub + (score* 1000), 10, 10);
+  pop();
+}
+
+function detectQRCode() {
+  qrCanvasContext.drawImage(video.elt, 0, 0, videoWidth, videoHeight);
+  let imageData = qrCanvasContext.getImageData(0, 0, videoWidth, videoHeight);
+  // let code = jsQR(video, videoWidth, videoHeight);
+  // console.log(JSON.stringify(imageData.data));
+  let code = jsQR(imageData.data, imageData.width, imageData.height);
+
+  if (code) {
+    console.log("QR Code detected: ", code.data);
+    qrIframe.src = code.data;
+    drawQRCode(code);
+  }
+}
+
+function drawQRCode(code) {
+  push();
+  noFill();
+  stroke(255, 0, 0);
+  strokeWeight(2);
+
+  // Draw the rectangle
+  beginShape();
+  vertex(location.topLeftCorner.x, location.topLeftCorner.y);
+  vertex(location.topRightCorner.x, location.topRightCorner.y);
+  vertex(location.bottomRightCorner.x, location.bottomRightCorner.y);
+  vertex(location.bottomLeftCorner.x, location.bottomLeftCorner.y);
+  endShape(CLOSE);
+
   pop();
 }
 
