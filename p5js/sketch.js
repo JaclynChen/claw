@@ -172,7 +172,7 @@ function draw() {
 
   if (code) {
     console.log("Found QR code", code);
-    iframe.src=code;
+    iframe.src=code.data;
   }
 }
 
