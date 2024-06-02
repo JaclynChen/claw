@@ -46,7 +46,7 @@ main {
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     margin: 2em auto;
-    max-width: 800px;
+    max-width: 1200px;  /* Increased max-width */
     border-radius: 10px;
 }
 
