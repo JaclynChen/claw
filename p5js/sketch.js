@@ -238,8 +238,8 @@ function drawPose(pose, poseIndex) {
         textAlign(RIGHT);
         xText = kp.position.x - (kpSize + kpTextMargin);
       }
-      // textStyle(BOLD);
-      // text(kp.part, xText, yText);
+      textStyle(BOLD);
+      text(kp.part, xText, yText);
       // textStyle(NORMAL);
       // yText += textSize();
       // text(int(kp.position.x) + ", " + int(kp.position.y), xText, yText);
