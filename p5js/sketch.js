@@ -15,6 +15,8 @@ let iframe = null;
 let scoreDisplay = null;
 let task = null;
 
+let screenWidth = window.screen.width;
+
 // Game state
 const scoreStub = "Current funds: $";
 let score;
@@ -66,24 +68,30 @@ function setup() {
   // Set the source of the iframe
   iframe.src = "https://jaclynchen.github.io/claw/index.html";
   // Set other attributes of the iframe
-  iframe.style.width = "640px";
-  iframe.style.height = "80vh";
+  let siteWidth = screenWidth - videoWidth;
+  let frameWidth = (siteWidth - 20) + "px";  // subtract 20 to account for any iframe scroll bar
+  iframe.style.width = frameWidth;
+  // iframe.style.width = "800px";
+  iframe.style.height = "95vh";
   iframe.style.border = "none";
   // Append the iframe to the container
-  document.body.appendChild(iframe);
+  // document.body.appendChild(iframe);
+  document.getElementById("infosite").appendChild(iframe);
 
   // Create webcam canvas
   let canvas = createCanvas(videoWidth, videoHeight);
-  canvas.position(640, 0);
+  canvas.position(siteWidth - 20, 0);
 
   // Add score counter
   task = document.createElement("p");
   task.textContent = "Task: Do jumping jacks";
-  document.body.appendChild(task);
+  // document.body.appendChild(task);
+  document.getElementById("text").appendChild(task);
 
   scoreDisplay = document.createElement("p");
   scoreDisplay.textContent = "Score: 0";
-  document.body.appendChild(scoreDisplay);
+  // document.body.appendChild(scoreDisplay);
+  document.getElementById("text").appendChild(scoreDisplay);
 
   // Setup Web Serial using serial.js
   // serial = new Serial();
@@ -96,7 +104,7 @@ function setup() {
   // serial.autoConnectAndOpenPreviouslyApprovedPort(serialOptions);
 
   // Add in a lil <p> element to provide messages. This is optional
-  pHtmlMsg = createP("Hullo");
+  // pHtmlMsg = createP("Hullo");
 
   // Create webcam image and put on page
   video = createCapture(constraints);
@@ -239,7 +247,7 @@ function drawPose(pose, poseIndex) {
     textStyle(BOLD);
     textAlign(LEFT, BOTTOM);
     textStyle(NORMAL);
-    pHtmlMsg.html("Confidence: " + nf(pose.pose.score, 0, 1));
+    // pHtmlMsg.html("Confidence: " + nf(pose.pose.score, 0, 1));
 }
 
 // Variables to store smoothed positions
@@ -322,7 +330,7 @@ function hasKeypoints(pose, keypointsToCheck) {
  */
  function onSerialErrorOccurred(eventSender, error) {
   console.log("onSerialErrorOccurred", error);
-  pHtmlMsg.html(error);
+  // pHtmlMsg.html(error);
 }
 
 /**
@@ -332,7 +340,7 @@ function hasKeypoints(pose, keypointsToCheck) {
  */
 function onSerialConnectionOpened(eventSender) {
   console.log("onSerialConnectionOpened");
-  pHtmlMsg.html("Serial connection opened successfully");
+  // pHtmlMsg.html("Serial connection opened successfully");
 }
 
 /**
@@ -342,7 +350,7 @@ function onSerialConnectionOpened(eventSender) {
  */
 function onSerialConnectionClosed(eventSender) {
   console.log("onSerialConnectionClosed");
-  pHtmlMsg.html("onSerialConnectionClosed");
+  // pHtmlMsg.html("onSerialConnectionClosed");
 }
 
 /**
@@ -353,7 +361,7 @@ function onSerialConnectionClosed(eventSender) {
  */
 function onSerialDataReceived(eventSender, newData) {
   console.log("onSerialDataReceived", newData);
-  pHtmlMsg.html("onSerialDataReceived: " + newData);
+  // pHtmlMsg.html("onSerialDataReceived: " + newData);
 }
 
 /**

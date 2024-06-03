@@ -6,3 +6,13 @@ html, body {
 canvas {
   display: block;
 }
+
+#text{ 
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  position: absolute;
+  top: 600px;
+  right: 0;
+  width: 200px;
+  height: 100px;
+  border: 3px solid #73AD21;
+}
