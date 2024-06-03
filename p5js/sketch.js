@@ -180,7 +180,9 @@ function draw() {
 
   if (code) {
     console.log("Found QR code", code);
-    iframe.src=code.data;
+    if(code.data.includes("jaclynchen")) {
+      iframe.src=code.data;
+    }
   }
 }
 
