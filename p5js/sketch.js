@@ -94,14 +94,14 @@ function setup() {
   document.getElementById("text").appendChild(scoreDisplay);
 
   // Setup Web Serial using serial.js
-  // serial = new Serial();
-  // serial.on(SerialEvents.CONNECTION_OPENED, onSerialConnectionOpened);
-  // serial.on(SerialEvents.CONNECTION_CLOSED, onSerialConnectionClosed);
-  // serial.on(SerialEvents.DATA_RECEIVED, onSerialDataReceived);
-  // serial.on(SerialEvents.ERROR_OCCURRED, onSerialErrorOccurred);
+  serial = new Serial();
+  serial.on(SerialEvents.CONNECTION_OPENED, onSerialConnectionOpened);
+  serial.on(SerialEvents.CONNECTION_CLOSED, onSerialConnectionClosed);
+  serial.on(SerialEvents.DATA_RECEIVED, onSerialDataReceived);
+  serial.on(SerialEvents.ERROR_OCCURRED, onSerialErrorOccurred);
 
   // If we have previously approved ports, attempt to connect with them
-  // serial.autoConnectAndOpenPreviouslyApprovedPort(serialOptions);
+  serial.autoConnectAndOpenPreviouslyApprovedPort(serialOptions);
 
   // Add in a lil <p> element to provide messages. This is optional
   // pHtmlMsg = createP("Hullo");
@@ -117,6 +117,18 @@ function setup() {
   // Game state init
   score = 0;
   lastPoseUp = false;
+
+  // funds checking for serial
+  var intervalID = window.setInterval(sendSerial, 30000);
+}
+
+function sendSerial() {
+  if(score > 0) {
+    if(serial.isOpen()) {
+      serial.writeLine(1);
+      score -= 1;
+    }
+  }
 }
 
 function draw() {
@@ -153,6 +165,11 @@ function draw() {
           score++;
           lastStateChangeTime = currentTime;
           console.log("Jumping jack detected. Score: " + score);
+          // If serial is open, transmit score
+          if(serial.isOpen()){
+            serial.writeLine(1); 
+            console.log("sent serial 1")
+          }
         }
       } else {
         if (isPoseUp(pose.pose) && currentTime - lastStateChangeTime > minStateChangeInterval) {
@@ -165,10 +182,10 @@ function draw() {
   }
 
   // Task information
-  task.innerText = "Task: Do jumping jacks";
+  task.innerText = "Do jumping jacks to raise funds! 1 jumping jack is equivalent to $10k of fundraising (15 seconds of claw time). Funds will be subtracted as they get used by the clean-up crew (the claw).";
 
   // Funding information
-  scoreDisplay.innerText = scoreStub + (score * 1000);
+  scoreDisplay.innerText = scoreStub + (score * 10000);
 
   // let imageData = video.get(0,0,videoWidth, videoHeight);
   // let imageData = video.pixels;
@@ -370,7 +387,7 @@ function onSerialDataReceived(eventSender, newData) {
  * Called automatically by the browser through p5.js when mouse clicked
  */
 function mouseClicked() {
-  // if (!serial.isOpen()) {
-    // serial.connectAndOpen(null, serialOptions);
-  // }
+  if (!serial.isOpen()) {
+    serial.connectAndOpen(null, serialOptions);
+  }
 }
