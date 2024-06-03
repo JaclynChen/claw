@@ -3,6 +3,7 @@
 // June 2024
 
 #define BUTTON_PIN 2
+#define CONTROL_PIN 3
 
 // pin 1 to 4
 int motorPins[] = {8, 9, 10, 11};
@@ -23,12 +24,19 @@ unsigned long activationInterval = 11500;
 bool motorActive = false;
 unsigned long motorStartTime = 0;
 
+// serial commnunication variables
+unsigned long lastSerialRecv = 0;
+unsigned long serialInterval = 20000;
+bool validSerial = false;
+
 void setup() {
   for (count = 0; count < 4; count++) {
     pinMode(motorPins[count], OUTPUT);
   }
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(CONTROL_PIN, OUTPUT);
+  digitalWrite(CONTROL_PIN, LOW);  // Initialize CONTROL_PIN to LOW
 }
 
 void moveForward() {
@@ -73,31 +81,49 @@ void loop() {
         motorActive = true;
         motorStartTime = millis();
         lastActivationTime = millis();
-        Serial.println("Motor activated");
+        // Serial.println("Motor activated");
       }
     }
   }
 
   last_button_state = button_reading;
 
+  // if (motorActive && validSerial) {
   if (motorActive) {
     unsigned long elapsedTime = millis() - motorStartTime;
 
-    if (elapsedTime <= 5000) {
+    if (elapsedTime <= 8000) {
       moveForward();
-    } else if (elapsedTime <= 5500) {
+    } else if (elapsedTime <= 8500) {
       // Pause for 1 second
-      delay(500);
-    } else if (elapsedTime <= 11500) {
+      // delay(500);
+    } else if (elapsedTime <= 16500) {
       moveBackward();
     } else {
       motorActive = false;
-      Serial.println("Motor deactivated");
+      // Serial.println("Motor deactivated");
     }
   }
 
-  Serial.print("Button state: ");
-  Serial.println(button_state);
-  Serial.print("Motor active: ");
-  Serial.println(motorActive);
+  // check for serial input
+  if (Serial.available() > 0) {
+    char input = Serial.read();
+    if (input == '1') {
+      lastSerialRecv = millis();
+      digitalWrite(CONTROL_PIN, LOW);  // have serial signal, drive low
+      validSerial = true;
+      // Serial.println("Received '1' over serial");
+    }
+  }
+  // Check if the last serial input was within the last 5 seconds
+  if ((millis() - lastSerialRecv) > serialInterval) {
+    digitalWrite(CONTROL_PIN, HIGH);  // Drive pin HIGH if no serial input within the last 5 seconds
+    validSerial = false;
+    // Serial.println("No serial input in the last 5 seconds");
+  }
+
+  // Serial.print("Button state: ");
+  // Serial.println(button_state);
+  // Serial.print("Motor active: ");
+  // Serial.println(motorActive);
 }
