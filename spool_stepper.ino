@@ -26,7 +26,7 @@ unsigned long motorStartTime = 0;
 
 // serial commnunication variables
 unsigned long lastSerialRecv = 0;
-unsigned long serialInterval = 20000;
+unsigned long serialInterval = 9000;
 bool validSerial = false;
 
 void setup() {
@@ -78,9 +78,11 @@ void loop() {
 
       // if the button state is LOW and 15 seconds have passed since the last activation
       if (button_state == LOW && (millis() - lastActivationTime) >= activationInterval) {
-        motorActive = true;
-        motorStartTime = millis();
-        lastActivationTime = millis();
+        if (validSerial) {
+          motorActive = true;
+          motorStartTime = millis();
+          lastActivationTime = millis();
+        }
         // Serial.println("Motor activated");
       }
     }
