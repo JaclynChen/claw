@@ -18,7 +18,7 @@ let task = null;
 let screenWidth = window.screen.width;
 
 // Game state
-const scoreStub = "Current funds: $";
+const scoreStub = "Seconds of clean-up time left: ";
 let score;
 let lastPoseUp;
 
@@ -119,7 +119,7 @@ function setup() {
   lastPoseUp = false;
 
   // funds checking for serial
-  var intervalID = window.setInterval(sendSerial, 30000);
+  var intervalID = window.setInterval(sendSerial, 10000);
 }
 
 function sendSerial() {
@@ -156,6 +156,9 @@ function draw() {
     let currentTime = millis();
     for (let i = 0; i < currentPoses.length; i++) {
       let pose = currentPoses[i];
+      // if (pose.pose.confidence > .5) {
+// 
+      // }
       drawPose(pose, i);
 
       // Check hand positions
@@ -182,10 +185,10 @@ function draw() {
   }
 
   // Task information
-  task.innerText = "Do jumping jacks to raise funds! 1 jumping jack is equivalent to $10k of fundraising (15 seconds of claw time). Funds will be subtracted as they get used by the clean-up crew (the claw).";
+  task.innerText = "Do jumping jacks to raise funds! 1 jumping jack is equivalent to 10 seconds of claw-retrieval time. Funds will be subtracted as they get used to keep the clean-up crew running (the claw).\n\n Scan QR codes as you clean up the Duwamish river to learn more about the history of the superfund site.";
 
   // Funding information
-  scoreDisplay.innerText = scoreStub + (score * 10000);
+  scoreDisplay.innerText = scoreStub + (score * 10);
 
   // let imageData = video.get(0,0,videoWidth, videoHeight);
   // let imageData = video.pixels;
